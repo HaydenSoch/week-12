@@ -24,6 +24,11 @@ Feedback <input id="fb" type="range" min="0" max="95" value="70">
 <input id = "Index1" type="range" min="0" max="100" step="1" value="0.0"><label id="Index1">Index</label>
 <br>
 <input id = "FiltSpeed1" type="range" min="0" max="5" step="0.01" value="0.0"><label id="FiltSpeed1">FiltSpeed</label>
+<br>
+Delay Time 2 <input id="time2" type="range" min="10" max="2000" value="300">
+<br>
+Feedback 2 <input id="fb2" type="range" min="0" max="95" value="70">
+<br>
 </p>
 <script>
 
@@ -148,24 +153,29 @@ document.getElementById('fb').addEventListener('input', function (e) {
 //FM Synth
 
 
-let osc1, mod, filterMod
+let osc2, mod, filterMod
 document.querySelector("#trig2").onclick = () =>
 
 {
  
 //Set up Frequency Modulation Tone
-osc1 = new OscillatorNode(ctx);
-osc1.frequency.value = 220;
-osc1.type = "sine";
+osc2 = new OscillatorNode(ctx);
+osc2.frequency.value = 220;
+osc2.type = "sine";
 
-const osc1Gain = new GainNode(ctx);
-osc1Gain.gain.value = 0.1;
+const osc2Gain = new GainNode(ctx);
+osc2Gain.gain.value = 0.1;
 
+const delay2 = new DelayNode(ctx, { maxDelayTime: 2.5})
 
+delay2.delayTime = 0.3
+
+const feedback2 = new GainNode(ctx)
+feedback2.gain.value = 0.7;
 
 
 mod = new OscillatorNode(ctx);
-mod.type = "sine"
+mod.type = "triangle"
 mod.frequency.value = 55; // modulator value
 
 const modulatorGain = new GainNode(ctx);
@@ -180,13 +190,13 @@ filter.Q.value = 20;
 
 filterMod = new OscillatorNode(ctx);
 filterMod.frequency.value = 0.5;
-filterMod.type = "triangle";
+filterMod.type = "sine";
 
 const filterModGain = new GainNode(ctx);
 filterModGain.gain.value = 1000
 
 //ASDR
-const dur2 = 0.15
+const dur2 = 1
 const t = ctx.currentTime;
   const env2 = new GainNode(ctx)
   env2.gain.value = 0;
@@ -201,19 +211,26 @@ const t = ctx.currentTime;
 //connect everything up
 
 filterMod.connect(filterModGain);
-filterModGain.connect(filter.frequency)
+//filterModGain.connect(filter.frequency)
+filterMod.connect(env2);
 
-osc1.connect(osc1Gain);
-osc1.connect(env2);
+osc2.connect(osc2Gain);
+osc2.connect(env2);
 
 
 mod.connect(modulatorGain);
 mod.connect(env2);
-modulatorGain.connect(osc1.frequency);
+
+modulatorGain.connect(osc2.frequency);
+osc2Gain.connect(env2);
 
 
-osc1Gain.connect(filter);
-filter.connect(ctx.destination);
+
+osc2Gain.connect(filter);
+filter.connect(delay2);
+delay2.connect(ctx.destination);
+delay2.connect(feedback2);
+feedback2.connect(delay2);
 env2.connect(ctx.destination);
 
 const slider1 = document.querySelector("#Modulator1");
@@ -240,8 +257,17 @@ const slider1 = document.querySelector("#Modulator1");
 
 });
 
+// Delay time slider
+document.getElementById('time2').addEventListener('input', function (e) {
+  delay2.delayTime.setTargetAtTime(e.target.value / 1000, ctx.currentTime, 0.05);
+});
 
-osc1.start();
+// Feedback slider.
+document.getElementById('fb2').addEventListener('input', function (e) {
+  feedback2.gain.setTargetAtTime(e.target.value / 100, ctx.currentTime, 0.02);
+});
+
+osc2.start();
 mod.start();
 filterMod.start();
 
